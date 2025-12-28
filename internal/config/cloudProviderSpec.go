@@ -1,5 +1,13 @@
 package config
 
+import "reflect"
+
+var cloudProviders = make(map[string]reflect.Type)
+
+func RegisterCloudProvider[T any](name string) {
+	cloudProviders[name] = reflect.TypeOf(*new(T))
+}
+
 type AwsCloudSpec struct {
 	Name                string
 	Ephemeral           bool
@@ -28,7 +36,7 @@ type GCPCloudSpec struct {
 }
 
 func init() {
-	RegisterCloudSpec[AwsCloudSpec]("aws")
-	RegisterCloudSpec[AzureCloudSpec]("azure")
-	RegisterCloudSpec[GCPCloudSpec]("gcp")
+	RegisterCloudProvider[AwsCloudSpec]("aws")
+	RegisterCloudProvider[AzureCloudSpec]("azure")
+	RegisterCloudProvider[GCPCloudSpec]("gcp")
 }
