@@ -1,20 +1,25 @@
 package config
 
-import "encoding/json"
-
-type ConfigManifest struct {
+type ConfigManifest[T any] struct {
 	Version  string
 	Kind     string
 	Metadata ObjectMetadata
-	Spec     json.RawMessage
+	Spec     T
 }
 
 type ObjectMetadata struct {
 	Name string
 }
 
-type ClusterSpecV1 struct {
+type ClusterSpecV1[T any] struct {
 	CheckTimer    string
 	CloudProvider string
-	Spec          json.RawMessage
+	Spec          T
+}
+type Metadata struct {
+	Name string `json:"name"`
+}
+
+func init() {
+	Register[ClusterSpecV1[any]]("aws")
 }

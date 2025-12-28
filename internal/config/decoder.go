@@ -2,32 +2,44 @@ package config
 
 import (
 	"fmt"
-	"os"
+	"reflect"
 
 	"sigs.k8s.io/yaml"
 )
 
-func LoadManifest(filePath string) (string, any, error) {
-	// 1. Read the file
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", nil, err
-	}
+type Object interface {
+	GetKind() string
+	GetName() string
+}
 
-	// 2. Unmarshal the envelope only
-	var m ConfigManifest
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return "", nil, err
-	}
+func (m ConfigManifest[T]) GetKind() string { return m.Kind }
 
-	// 3. Decode the spec based on the Kind
-	switch m.Kind {
-	case "Cluster":
-		var s ClusterSpecV1
-		err := yaml.Unmarshal(m.Spec, &s)
-		return m.Kind, s, err
+var registry = make(map[string]reflect.Type)
+var registryCloudSpec = make(map[string]reflect.Type)
 
-	default:
-		return m.Kind, nil, fmt.Errorf("unknown kind: %s", m.Kind)
+func Register[T any](kind string) {
+	registry[kind] = reflect.TypeOf(ConfigManifest[T]{})
+}
+
+func RegisterCloudSpec[T any](kind string) {
+	registryCloudSpec[kind] = reflect.TypeOf(ConfigManifest[T]{})
+}
+
+func LoadManifest(data []byte) (Object, error) {
+	var peek struct {
+		Kind string `json:"kind"`
 	}
+	if err := yaml.Unmarshal(data, &peek); err != nil {
+		return nil, fmt.Errorf("failed to peek kind: %w", err)
+	}
+	combinedType, ok := registry[peek.Kind]
+	if !ok {
+		return nil, fmt.Errorf("unknown kind: %s", peek.Kind)
+	}
+	
+	ptr := reflect.New(combinedType).Interface()
+	if err := yaml.Unmarshal(data, ptr); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal into %s: %w", peek.Kind, err)
+	}
+	return reflect.ValueOf(ptr).Elem().Interface().(Object), nil
 }
