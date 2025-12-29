@@ -1,4 +1,4 @@
-package k8skubeadmtokenserver
+package main
 
 import "fmt"
 

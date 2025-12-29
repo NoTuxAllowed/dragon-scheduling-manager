@@ -1,33 +1,59 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
-	"os"
+	"reflect"
 
 	"sigs.k8s.io/yaml"
 )
 
-func LoadManifest(filePath string) (string, any, error) {
-	// 1. Read the file
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return "", nil, err
+type Object interface {
+	GetKind() string
+	GetName() string
+}
+func (m *ConfigManifest) GetKind() string { return m.Kind }
+func (m *ConfigManifest) GetName() string { return m.Metadata.Name }
+var registry = make(map[string]reflect.Type)
+
+func Register[T any](kind string) {
+	registry[kind] = reflect.TypeOf((*T)(nil)).Elem()
+}
+
+func LoadManifest(data []byte) (*ConfigManifest, error) {
+	var peek struct {
+		Kind string `json:"kind"`
+	}
+	if err := yaml.Unmarshal(data, &peek); err != nil {
+		return nil, fmt.Errorf("failed to peek kind: %w", err)
+	}
+	specType, ok := registry[peek.Kind]
+	if !ok {
+		return nil, fmt.Errorf("unknown kind: %s", peek.Kind)
 	}
 
-	// 2. Unmarshal the envelope only
-	var m ConfigManifest
-	if err := yaml.Unmarshal(data, &m); err != nil {
-		return "", nil, err
+	type tempManifest struct {
+		Version  string          `json:"version"`
+		Kind     string          `json:"kind"`
+		Metadata ObjectMetadata  `json:"metadata"`
+		Spec     json.RawMessage `json:"spec"`
+	}
+	var tm tempManifest
+	if err := yaml.Unmarshal(data, &tm); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal manifest structure: %w", err)
 	}
 
-	// 3. Decode the spec based on the Kind
-	switch m.Kind {
-	case "Cluster":
-		var s ClusterSpecV1
-		err := yaml.Unmarshal(m.Spec, &s)
-		return m.Kind, s, err
-
-	default:
-		return m.Kind, nil, fmt.Errorf("unknown kind: %s", m.Kind)
+	m := &ConfigManifest{
+		Version:  tm.Version,
+		Kind:     tm.Kind,
+		Metadata: tm.Metadata,
 	}
+
+	specPtr := reflect.New(specType).Interface()
+	if err := yaml.Unmarshal(tm.Spec, specPtr); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal spec into %s: %w", peek.Kind, err)
+	}
+	m.Spec = reflect.ValueOf(specPtr).Elem().Interface()
+
+	return m, nil
 }
