@@ -22,3 +22,9 @@ FROM scratch AS scheduler
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /bin/scheduler /scheduler
 ENTRYPOINT ["/scheduler"]
+
+FROM scratch AS all
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=scheduler /scheduler /scheduler
+COPY --from=k8s-kubeadm-token-server /k8s-kubeadm-token-server /k8s-kubeadm-token-server
+COPY --from=dragonctl /dragonctl /dragonctl
