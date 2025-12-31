@@ -14,11 +14,11 @@ type Provider struct {
 // Ensure Provider implements CloudProvider
 var _ interfaces.CloudProvider = (*Provider)(nil)
 
-func (p *Provider) Provision(ctx context.Context) (error) {
+func (p *Provider) Provision(ctx context.Context) error {
 	fmt.Printf("[AWS] Provisioning instance with type %s (Spot: %v)\n", p.Config.InstanceType, p.Config.Spot)
 	return nil
 }
-func (p *Provider) Check(ctx context.Context) (error) {
+func (p *Provider) Check(ctx context.Context) error {
 	fmt.Printf("[AWS] Checking instance with type %s (Spot: %v)\n", p.Config.InstanceType, p.Config.Spot)
 	return nil
 }

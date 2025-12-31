@@ -14,7 +14,7 @@ import (
 
 func main() {
 	fmt.Println("this is dragonctl")
-	
+
 	data, err := os.ReadFile("/home/bigpod/test.yaml")
 	if err != nil {
 		fmt.Printf("Error reading file: %v\n", err)

@@ -12,8 +12,10 @@ type Object interface {
 	GetKind() string
 	GetName() string
 }
+
 func (m *ConfigManifest) GetKind() string { return m.Kind }
 func (m *ConfigManifest) GetName() string { return m.Metadata.Name }
+
 var registry = make(map[string]reflect.Type)
 
 func Register[T any](kind string) {
